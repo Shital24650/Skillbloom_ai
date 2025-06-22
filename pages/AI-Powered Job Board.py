@@ -48,28 +48,25 @@ if st.button("🔍 Find Matching Jobs"):
         st.warning("⚠️ Please upload your resume first.")
     else:
         with st.spinner("Finding jobs tailored to your profile..."):
-            prompt = f"""
-Based on this resume and job preferences, recommend 5 realistic and relevant job roles.
+            def build_prompt(self, user_input):
+    return f"""
+You are an AI career mentor for a project called SkillBloom.
 
-Resume:
-{resume_text}
+Respond with:
+1. 3 realistic career paths based on the user's input.
+2. Top 3 skills required for each path.
+3. One free online resource per path to help them get started.
 
-Preferences:
-- Location: {location}
-- Minimum Salary: ${salary_expectation}
-- Job Type: {job_type}
+⚠️ If the user mentions a specific salary expectation (like ₹50,000/month or $600/month), and they are entry-level or have only internship experience, gently inform them:
+- That it might take time to reach that salary.
+- That entry-level roles, especially remote ones, may start lower.
+- That they can improve chances by building projects, gaining certifications, or freelancing.
 
-For each job, include:
-- Job Title
-- Company Name (realistic or fictional)
-- Location
-- Estimated Salary Range
-- Key Required Skills
-- Short Job Description
-- Why this job matches the candidate’s resume
+Keep the tone motivational and non-judgmental. Avoid harsh wording. Be realistic but kind.
 
-Format the output in clean, readable markdown.
+User says: "{user_input}"
 """
+
             message = Message(payload={"text": prompt}, sender="user", receiver="JobMatchAI")
             response = st.session_state.job_agent.execute(message)
 
