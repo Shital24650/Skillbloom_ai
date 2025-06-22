@@ -81,6 +81,7 @@ Please provide **in-depth AI-powered career guidance**:
     - 3–4 essential skills
     - 1 free course/resource with title and URL
     - A brief growth path (e.g., Junior → Mid-Level → Senior)
+
 Format cleanly in Markdown with bullet points and headings. Avoid generic advice. Only give relevant and detailed info.
 """
 
@@ -93,10 +94,15 @@ Format cleanly in Markdown with bullet points and headings. Avoid generic advice
         response = st.session_state.agent.execute(message)
         st.session_state.last_result = response.payload["text"]
 
-# === Display Output ===
+# === Display Output Safely ===
 if "last_result" in st.session_state:
     st.markdown("### 🔍 AI Career Suggestions:")
-    st.markdown(st.session_state.last_result)
+    try:
+        cleaned_output = st.session_state.last_result[:4000]
+        st.markdown(cleaned_output, unsafe_allow_html=False)
+    except Exception:
+        st.error("⚠️ Could not display suggestions. Showing as plain text.")
+        st.code(st.session_state.last_result)
 
     st.download_button(
         label="📥 Download Suggestions as .txt",
