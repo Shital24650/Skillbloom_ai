@@ -2,23 +2,44 @@
 
 from adk.type_defs import Message
 from adk.agent import Agent
-import google.generativeai as genai
+import openai
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+openai.api_key = os.getenv("GROQ_API_KEY")
+openai.api_base = "https://api.groq.com/openai/v1"
 
 class MentorAgent(Agent):
     def __init__(self, config=None):
         super().__init__(config)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.model = "llama3-8b-8192"  # or "mixtral-8x7b-32768"
 
     def execute(self, message: Message) -> Message:
         user_prompt = message.payload.get("text", "")
-        response = self.model.generate_content(user_prompt)
+
+        response = openai.ChatCompletion.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a supportive and knowledgeable career mentor AI. "
+                        "Help users navigate their learning journey, provide specific advice, and offer encouragement."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            temperature=0.7
+        )
+
+        reply = response["choices"][0]["message"]["content"]
+
         return Message(
-            payload={"text": response.text},
+            payload={"text": reply},
             sender=self.name,
             receiver=message.sender
         )
