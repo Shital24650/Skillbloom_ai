@@ -2,35 +2,23 @@
 
 from adk.type_defs import Message
 from adk.agent import Agent
-import openai
+import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-openai.api_key = os.getenv("GROQ_API_KEY")
-openai.api_base = "https://api.groq.com/openai/v1"
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 class ATSResumeAI(Agent):
     def __init__(self, config=None):
         super().__init__(config)
-        self.model = "llama3-8b-8192"  # or "mixtral-8x7b-32768"
+        self.model = genai.GenerativeModel("gemini-1.5-flash")
 
     def execute(self, message: Message) -> Message:
         resume_content = message.payload.get("text", "")
-
-        response = openai.ChatCompletion.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": "You are an expert resume analyst. Improve ATS compatibility."},
-                {"role": "user", "content": resume_content}
-            ],
-            temperature=0.7
-        )
-
-        reply = response["choices"][0]["message"]["content"]
-
+        response = self.model.generate_content(resume_content)
         return Message(
-            payload={"text": reply},
+            payload={"text": response.text},
             sender=self.name,
             receiver=message.sender
         )
