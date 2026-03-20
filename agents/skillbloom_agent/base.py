@@ -11,7 +11,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 class SkillAgent(Agent):
     def __init__(self, config):
         super().__init__(config)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.model = genai.GenerativeModel("gemini-1.5-flash-latest")
 
     def execute(self, message: Message) -> Message:
         user_input = message.payload.get("text", "")
