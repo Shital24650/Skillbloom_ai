@@ -1,26 +1,14 @@
-
 import streamlit as st
-import json
+from agents.skillbloom_agent.base import SkillAgent
+from adk.type_defs import Message
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-# === PIPELINE IMPORTS ===
-from pipeline.context_model import extract_context
-from pipeline.task_decomposer import decompose_tasks
-from pipeline.agent_executor import execute_tasks
-from pipeline.plan_synthesizer import synthesize_plan
-
-# === EVALUATION IMPORTS ===
-from evaluation.baseline_llm import baseline
-from evaluation.evaluator import evaluate
-
-# === PAGE CONFIG ===
 st.set_page_config(page_title="SkillBloom AI", page_icon="🌱", layout="centered")
 
-# === UI STYLING (KEEP THIS) ===
+# === Branding & Welcome Section ===
 st.markdown("""
     <style>
     .centered-title {
@@ -48,19 +36,23 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# === HEADER ===
 st.markdown("""
 <div class="welcome-box">
-    <div class="welcome-heading">⚔️ SkillBloom AI</div>
+    <div class="welcome-heading">🌱 Welcome to SkillBloom AI</div>
     <p class="welcome-text">
-        Structured Career Intelligence System<br>
-        Transforming vague queries into actionable career plans using multi-step reasoning.
+        Ready to discover your perfect career path? <br>
+        Powered by AI, SkillBloom helps you turn your interests into action.<br>
+        Select your area of interest and let us guide you with tailored suggestions, skills, and free learning resources.
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# === INPUT SECTION ===
-st.markdown("### 🎯 Enter Your Career Query")
+# === Setup SkillAgent only once ===
+if "agent" not in st.session_state:
+    st.session_state.agent = SkillAgent(config={})
+
+# === Career Input Section ===
+st.markdown("### 🎯 Tell us about your goals")
 
 interest_area = st.selectbox(
     "Select a broad interest area:",
@@ -72,67 +64,43 @@ experience_level = st.radio(
     ["Beginner", "Intermediate", "Advanced"]
 )
 
-custom_input = st.text_input("Or type your specific interest or goal")
+custom_input = st.text_input("Or type your specific interest or skill")
 
-# === EXECUTION BUTTON ===
-if st.button("⚔️ Generate Structured Plan"):
+# === Run AI Logic ===
+if st.button("🌱 Suggest Careers"):
+    user_text = custom_input.strip() or interest_area
 
-    query = custom_input.strip() or interest_area
+    prompt = f"""
+User interest: {user_text}
+Stage: {experience_level}
 
-    if not query:
-        st.warning("Please enter a query.")
-        st.stop()
+Please provide **in-depth AI-powered career guidance**:
+- Suggest 3 suitable career paths.
+- For each career path, include:
+    - A short job role description (2–3 lines)
+    - 3–4 essential skills
+    - 1 free course/resource with title and URL
+    - A brief growth path (e.g., Junior → Mid-Level → Senior)
+Format cleanly in Markdown with bullet points and headings. Avoid generic advice. Only give relevant and detailed info.
+"""
 
-    with st.spinner("Running structured reasoning pipeline..."):
+    with st.spinner("Thinking... 🔍"):
+        message = Message(
+            payload={"text": prompt, "context": "career_mentor"},
+            sender="user",
+            receiver="SkillAgent"
+        )
+        response = st.session_state.agent.execute(message)
+        st.session_state.last_result = response.payload["text"]
 
-        # STEP 1: Context Extraction
-        context = extract_context(query)
+# === Display Output ===
+if "last_result" in st.session_state:
+    st.markdown("### 🔍 AI Career Suggestions:")
+    st.markdown(st.session_state.last_result)
 
-        # STEP 2: Task Decomposition
-        tasks = decompose_tasks(context)
-
-        # STEP 3: Agent Execution
-        results = execute_tasks(tasks, context)
-
-        # STEP 4: Plan Synthesis
-        final_output = synthesize_plan(results)
-
-        # STEP 5: Baseline LLM
-        baseline_output = baseline(query)
-
-        # STEP 6: Evaluation
-        scores = evaluate(final_output, baseline_output)
-
-        # SAVE TO SESSION
-        st.session_state.final_output = final_output
-        st.session_state.scores = scores
-        st.session_state.context = context
-        st.session_state.tasks = tasks
-
-        # === LOGGING ===
-        os.makedirs("logs", exist_ok=True)
-
-        with open("logs/run.json", "w") as f:
-            json.dump({
-                "query": query,
-                "context": context,
-                "tasks": tasks,
-                "output": final_output,
-                "scores": scores
-            }, f, indent=4)
-
-# === OUTPUT DISPLAY ===
-if "final_output" in st.session_state:
-
-    st.subheader("📌 Structured Career Plan")
-    st.json(st.session_state.final_output)
-
-    st.subheader("📊 Evaluation Scores")
-    st.json(st.session_state.scores)
-
-    with st.expander("🔍 Debug: Pipeline Details"):
-        st.write("Context:", st.session_state.context)
-        st.write("Tasks:", st.session_state.tasks)
-
-    st.success("✅ Pipeline executed successfully and logged!")
-
+    st.download_button(
+        label="📥 Download Suggestions as .txt",
+        data=st.session_state.last_result,
+        file_name="skillbloom_career_suggestions.txt",
+        mime="text/plain"
+    )
