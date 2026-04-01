@@ -1,4 +1,4 @@
-```python
+
 import streamlit as st
 import json
 import os
@@ -135,4 +135,4 @@ if "final_output" in st.session_state:
         st.write("Tasks:", st.session_state.tasks)
 
     st.success("✅ Pipeline executed successfully and logged!")
-```
+
